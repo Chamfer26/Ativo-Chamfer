@@ -856,23 +856,55 @@ function exportExcel() {
   if (items.length === 0) { showToast('Nenhum item para exportar.'); return; }
 
   const wb = XLSX.utils.book_new();
-  const headers = ['Nº Plaqueta','Nº de Série','Tipo de Ativo','Subtipo','Marca','Modelo','Ano Fabricação','Equipamento','Descrição','Estado de Conservação','Localização / Setor','Vistoriado','Data Vistoria'];
-  const rows = items.map(i => [i.plaqueta, i.serie, i.tipo, i.subtipo, i.marca||'', i.modelo||'', i.ano_fabricacao||'', i.nome, i.descricao, i.estado, i.local, i.vistoriado ? 'Sim' : 'Não', i.data_vistoria||'']);
+  const headers = [
+    'Nº Plaqueta','Nº de Série','Tipo de Ativo','Subtipo','Marca','Modelo',
+    'Ano Fabricação','Equipamento','Descrição','Estado de Conservação',
+    'Localização / Setor','Vistoriado','Data Vistoria',
+    'Foto Principal','Foto Frente','Foto Traseira','Foto Lado Direito','Foto Lado Esquerdo','Foto Plaqueta/S.N'
+  ];
+  const rows = items.map(i => [
+    i.plaqueta, i.serie, i.tipo, i.subtipo, i.marca||'', i.modelo||'',
+    i.ano_fabricacao||'', i.nome, i.descricao, i.estado, i.local,
+    i.vistoriado ? 'Sim' : 'Não', i.data_vistoria||'',
+    i.imagem && !i.imagem.startsWith('data:') ? i.imagem : '',
+    i.fotos?.frente && !i.fotos.frente.startsWith('data:') ? i.fotos.frente : '',
+    i.fotos?.traseira && !i.fotos.traseira.startsWith('data:') ? i.fotos.traseira : '',
+    i.fotos?.direita && !i.fotos.direita.startsWith('data:') ? i.fotos.direita : '',
+    i.fotos?.esquerda && !i.fotos.esquerda.startsWith('data:') ? i.fotos.esquerda : '',
+    i.fotos?.serie && !i.fotos.serie.startsWith('data:') ? i.fotos.serie : ''
+  ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,12,14].map(w => ({wch: w}));
+  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,12,14,40,40,40,40,40,40].map(w => ({wch: w}));
 
+  // Formata cabeçalho
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
     const cell = ws[XLSX.utils.encode_cell({r:0, c:C})];
     if (cell) cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
   }
 
+  // Transforma links de fotos em hiperlinks clicáveis
+  for (let R = 1; R <= rows.length; R++) {
+    for (let C = 13; C <= 18; C++) {
+      const cellRef = XLSX.utils.encode_cell({r:R, c:C});
+      const cell = ws[cellRef];
+      if (cell && cell.v && cell.v.startsWith('http')) {
+        cell.l = { Target: cell.v, Tooltip: 'Clique para ver a foto' };
+        cell.s = { font: { color: { rgb: '0000FF' }, underline: true } };
+        cell.v = 'Ver foto →';
+      }
+    }
+  }
+
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário');
 
+  const vistoriados = items.filter(i => i.vistoriado).length;
   const resumo = [
     ['RESUMO DO INVENTÁRIO'],[''],
     ['Total de equipamentos', items.length],
+    ['Vistoriados', vistoriados],
+    ['Pendentes', items.length - vistoriados],
     ['Gerado em', new Date().toLocaleDateString('pt-BR')],
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(resumo);
