@@ -360,8 +360,16 @@
   </div>
 </div>
 
-<!-- Modal ZIP -->
-<div id="zip-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+<!-- Modal visualizar fotos -->
+<div id="foto-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;">
+  <div style="width:100%;max-width:500px;padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <span id="foto-modal-titulo" style="color:#fff;font-size:16px;font-weight:600;"></span>
+      <button onclick="document.getElementById('foto-modal').style.display='none'" style="background:none;border:none;color:#fff;font-size:28px;cursor:pointer;">×</button>
+    </div>
+    <div id="foto-modal-conteudo"></div>
+  </div>
+</div> style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;margin:auto;margin-top:20%;">
     <h3 style="font-size:16px;margin-bottom:12px;">📦 Baixar fotos em ZIP</h3>
     <p style="font-size:13px;color:#666;margin-bottom:12px;">Digite a plaqueta para baixar as fotos ou deixe em branco para baixar todas:</p>
@@ -836,8 +844,8 @@ function renderList() {
   const hasMore = filtered.length > PAGE;
 
   list.innerHTML = showing.map(item => `
-    <div class="item-card${item.vistoriado ? ' vistoriado' : ''}">
-      ${item.imagem
+    <div class="item-card${item.vistoriado ? ' vistoriado' : ''}" onclick="viewFotos(${item.id})" style="cursor:pointer;">
+      ${item.imagem && item.imagem.startsWith('http')
         ? `<img src="${item.imagem}" alt="${item.nome}" />`
         : `<div class="no-img"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="5" width="22" height="18" rx="3" stroke="#aac4e8" stroke-width="1.6"/><circle cx="14" cy="13" r="4" stroke="#aac4e8" stroke-width="1.4"/></svg></div>`
       }
@@ -856,7 +864,7 @@ function renderList() {
           ${item.estado ? `<b>${item.estado}</b>` : ''}${item.local ? ' · ' + item.local : ''}
         </div>
       </div>
-      <button class="del-btn" onclick="deleteItem(${item.id})" title="Remover">×</button>
+      <button class="del-btn" onclick="event.stopPropagation();deleteItem(${item.id})" title="Remover">×</button>
     </div>
   `).join('');
 
@@ -924,6 +932,51 @@ function exportExcel() {
 
   XLSX.writeFile(wb, `inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
   showToast('📥 Planilha baixada!');
+}
+
+function viewFotos(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  document.getElementById('foto-modal-titulo').textContent = `Plaqueta ${item.plaqueta} — ${item.nome}`;
+
+  const slots = [
+    { label: 'Foto Principal', url: item.imagem },
+    { label: 'Frente', url: item.fotos?.frente },
+    { label: 'Traseira', url: item.fotos?.traseira },
+    { label: 'Lado Direito', url: item.fotos?.direita },
+    { label: 'Lado Esquerdo', url: item.fotos?.esquerda },
+    { label: 'Plaqueta / S.N', url: item.fotos?.serie },
+  ].filter(s => s.url && s.url.startsWith('http'));
+
+  if (slots.length === 0) {
+    document.getElementById('foto-modal-conteudo').innerHTML = `
+      <div style="color:#aaa;text-align:center;padding:40px 0;">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="40" height="32" rx="5" stroke="#666" stroke-width="2"/><circle cx="24" cy="24" r="7" stroke="#666" stroke-width="2"/></svg>
+        <p style="margin-top:12px;">Nenhuma foto registrada para este item.</p>
+      </div>`;
+  } else {
+    document.getElementById('foto-modal-conteudo').innerHTML = slots.map(s => `
+      <div style="margin-bottom:16px;">
+        <p style="color:#aaa;font-size:12px;margin-bottom:6px;">${s.label}</p>
+        <img src="${s.url}" style="width:100%;border-radius:8px;object-fit:contain;background:#111;" />
+        <a href="${s.url}" target="_blank" style="display:block;text-align:center;color:#7ab3f0;font-size:12px;margin-top:4px;">Abrir em tamanho original ↗</a>
+      </div>
+    `).join('');
+  }
+
+  // Dados do item
+  document.getElementById('foto-modal-conteudo').innerHTML += `
+    <div style="background:#111;border-radius:8px;padding:12px;margin-top:8px;color:#ccc;font-size:13px;line-height:1.8;">
+      <b style="color:#fff;">${item.nome}</b><br>
+      ${item.tipo ? item.tipo + (item.subtipo ? ' · ' + item.subtipo : '') + '<br>' : ''}
+      ${item.marca ? item.marca + (item.modelo ? ' ' + item.modelo : '') + '<br>' : ''}
+      ${item.estado ? 'Estado: ' + item.estado + '<br>' : ''}
+      ${item.local ? 'Local: ' + item.local + '<br>' : ''}
+      ${item.descricao ? '<br><span style="color:#999;">' + item.descricao + '</span>' : ''}
+    </div>`;
+
+  document.getElementById('foto-modal').style.display = 'flex';
 }
 
 function showZipModal() {
