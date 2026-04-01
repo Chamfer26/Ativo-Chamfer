@@ -369,7 +369,9 @@
     </div>
     <div id="foto-modal-conteudo"></div>
   </div>
-</div> style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+</div>
+
+<div id="zip-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;margin:auto;margin-top:20%;">
     <h3 style="font-size:16px;margin-bottom:12px;">📦 Baixar fotos em ZIP</h3>
     <p style="font-size:13px;color:#666;margin-bottom:12px;">Digite a plaqueta para baixar as fotos ou deixe em branco para baixar todas:</p>
@@ -845,7 +847,7 @@ function renderList() {
 
   list.innerHTML = showing.map(item => `
     <div class="item-card${item.vistoriado ? ' vistoriado' : ''}" onclick="viewFotos(${item.id})" style="cursor:pointer;">
-      ${item.imagem && item.imagem.startsWith('http')
+      ${item.imagem
         ? `<img src="${item.imagem}" alt="${item.nome}" />`
         : `<div class="no-img"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="5" width="22" height="18" rx="3" stroke="#aac4e8" stroke-width="1.6"/><circle cx="14" cy="13" r="4" stroke="#aac4e8" stroke-width="1.4"/></svg></div>`
       }
@@ -947,7 +949,7 @@ function viewFotos(id) {
     { label: 'Lado Direito', url: item.fotos?.direita },
     { label: 'Lado Esquerdo', url: item.fotos?.esquerda },
     { label: 'Plaqueta / S.N', url: item.fotos?.serie },
-  ].filter(s => s.url && s.url.startsWith('http'));
+  ].filter(s => s.url && (s.url.startsWith('http') || s.url.startsWith('data:')));
 
   if (slots.length === 0) {
     document.getElementById('foto-modal-conteudo').innerHTML = `
