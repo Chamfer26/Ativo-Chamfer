@@ -658,37 +658,45 @@ async function deleteItem(id) {
 
 async function save(item) {
   try {
-    // Convert fotos object to jsonb
     const row = {
       id: item.id,
       plaqueta: item.plaqueta,
-      serie: item.serie,
-      tipo: item.tipo,
-      subtipo: item.subtipo,
-      marca: item.marca,
-      modelo: item.modelo,
-      ano_fabricacao: item.ano_fabricacao,
-      nome: item.nome,
-      descricao: item.descricao,
-      estado: item.estado,
-      local: item.local,
+      serie: item.serie || '',
+      tipo: item.tipo || '',
+      subtipo: item.subtipo || '',
+      marca: item.marca || '',
+      modelo: item.modelo || '',
+      ano_fabricacao: item.ano_fabricacao || '',
+      nome: item.nome || '',
+      descricao: item.descricao || '',
+      estado: item.estado || '',
+      local: item.local || '',
       vistoriado: item.vistoriado || false,
       data_vistoria: item.data_vistoria || null,
       imagem: item.imagem || null,
       fotos: item.fotos || null
     };
-    const r = await fetch(SUPABASE_URL + '/rest/v1/inventario?on_conflict=plaqueta', {
+    // Tenta upsert (insert ou update se plaqueta já existe)
+    const r = await fetch(SUPABASE_URL + '/rest/v1/inventario', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer': 'resolution=merge-duplicates'
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+        'x-upsert': 'true'
       },
       body: JSON.stringify(row)
     });
-    if (!r.ok) showToast('⚠️ Erro ao salvar no banco');
-  } catch(e) { showToast('⚠️ Sem conexão com o banco de dados'); }
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('Supabase save error:', r.status, err);
+      showToast('⚠️ Erro ao salvar no banco');
+    }
+  } catch(e) {
+    console.error('Save exception:', e);
+    showToast('⚠️ Sem conexão com o banco de dados');
+  }
   updateBadge();
 }
 
