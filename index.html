@@ -633,12 +633,10 @@ function addItem() {
   const existingIdx = items.findIndex(i => String(i.plaqueta).trim() === String(plaqueta).trim());
   if (existingIdx >= 0) {
     items[existingIdx] = { ...items[existingIdx], ...item, id: items[existingIdx].id };
-    save(items[existingIdx]);
-    showToast('✅ Ativo vistoriado e confrontado com o inventário!');
+    save(items[existingIdx], '✅ Ativo vistoriado e confrontado!');
   } else {
     items.push(item);
-    save(item);
-    showToast('✅ Novo ativo adicionado ao inventário!');
+    save(item, '✅ Novo ativo adicionado ao inventário!');
   }
 
   // reset
@@ -705,7 +703,7 @@ async function uploadFotoStorage(base64, plaqueta, slot) {
   } catch(e) { return null; }
 }
 
-async function save(item) {
+async function save(item, successMsg) {
   try {
     // Faz upload das fotos para o Storage
     if (item.imagem && item.imagem.startsWith('data:')) {
@@ -748,7 +746,9 @@ async function save(item) {
       },
       body: JSON.stringify(row)
     });
-    if (!r.ok) {
+    if (r.ok) {
+      if (successMsg) showToast(successMsg);
+    } else {
       const err = await r.text();
       console.error('Supabase save error:', r.status, err);
       showToast('⚠️ Erro ao salvar no banco');
