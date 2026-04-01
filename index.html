@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventário de Equipamentos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; background: #f4f6f9; color: #222; }
@@ -353,12 +354,25 @@
   </div>
 
   <div class="export-section" id="export-section" style="display:none">
-    <h3>📥 Exportar planilha</h3>
+    <h3>📥 Exportar dados</h3>
     <button class="btn btn-success" onclick="exportExcel()">Baixar Excel (.xlsx)</button>
+    <button class="btn btn-primary" style="margin-top:8px;" onclick="showZipModal()">📦 Baixar fotos em ZIP</button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Modal ZIP -->
+<div id="zip-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;margin:auto;margin-top:20%;">
+    <h3 style="font-size:16px;margin-bottom:12px;">📦 Baixar fotos em ZIP</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:12px;">Digite a plaqueta para baixar as fotos ou deixe em branco para baixar todas:</p>
+    <input type="text" id="zip-plaqueta" placeholder="Ex: 00887 (ou vazio para todas)" style="margin-bottom:12px;">
+    <button class="btn btn-primary" onclick="downloadZip()">Baixar ZIP</button>
+    <button class="btn" style="margin-top:8px;background:#f4f6f9;" onclick="document.getElementById('zip-modal').style.display='none'">Cancelar</button>
+    <div id="zip-loading" style="display:none;text-align:center;padding:10px;font-size:13px;color:#1a56a0;">
+      <div class="spinner"></div> Baixando fotos... aguarde
+    </div>
+  </div>
+</div>
 
 <script>
 // ⚙️ CONFIGURE AQUI: cole a URL do seu Google Apps Script após publicar
@@ -862,39 +876,36 @@ function exportExcel() {
     'Localização / Setor','Vistoriado','Data Vistoria',
     'Foto Principal','Foto Frente','Foto Traseira','Foto Lado Direito','Foto Lado Esquerdo','Foto Plaqueta/S.N'
   ];
+
   const rows = items.map(i => [
-    i.plaqueta, i.serie, i.tipo, i.subtipo, i.marca||'', i.modelo||'',
-    i.ano_fabricacao||'', i.nome, i.descricao, i.estado, i.local,
-    i.vistoriado ? 'Sim' : 'Não', i.data_vistoria||'',
-    i.imagem && !i.imagem.startsWith('data:') ? i.imagem : '',
-    i.fotos?.frente && !i.fotos.frente.startsWith('data:') ? i.fotos.frente : '',
-    i.fotos?.traseira && !i.fotos.traseira.startsWith('data:') ? i.fotos.traseira : '',
-    i.fotos?.direita && !i.fotos.direita.startsWith('data:') ? i.fotos.direita : '',
-    i.fotos?.esquerda && !i.fotos.esquerda.startsWith('data:') ? i.fotos.esquerda : '',
-    i.fotos?.serie && !i.fotos.serie.startsWith('data:') ? i.fotos.serie : ''
+    i.plaqueta,
+    i.serie || '',
+    i.tipo || '',
+    i.subtipo || '',
+    i.marca || '',
+    i.modelo || '',
+    i.ano_fabricacao || '',
+    i.nome || '',
+    i.descricao || '',
+    i.estado || '',
+    i.local || '',
+    i.vistoriado ? 'Sim' : 'Não',
+    i.data_vistoria || '',
+    (i.imagem && i.imagem.startsWith('http')) ? i.imagem : '',
+    (i.fotos?.frente && i.fotos.frente.startsWith('http')) ? i.fotos.frente : '',
+    (i.fotos?.traseira && i.fotos.traseira.startsWith('http')) ? i.fotos.traseira : '',
+    (i.fotos?.direita && i.fotos.direita.startsWith('http')) ? i.fotos.direita : '',
+    (i.fotos?.esquerda && i.fotos.esquerda.startsWith('http')) ? i.fotos.esquerda : '',
+    (i.fotos?.serie && i.fotos.serie.startsWith('http')) ? i.fotos.serie : ''
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,12,14,40,40,40,40,40,40].map(w => ({wch: w}));
+  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,12,14,60,60,60,60,60,60].map(w => ({wch: w}));
 
-  // Formata cabeçalho
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
     const cell = ws[XLSX.utils.encode_cell({r:0, c:C})];
     if (cell) cell.s = { font: { bold: true }, alignment: { horizontal: "center" } };
-  }
-
-  // Transforma links de fotos em hiperlinks clicáveis
-  for (let R = 1; R <= rows.length; R++) {
-    for (let C = 13; C <= 18; C++) {
-      const cellRef = XLSX.utils.encode_cell({r:R, c:C});
-      const cell = ws[cellRef];
-      if (cell && cell.v && cell.v.startsWith('http')) {
-        cell.l = { Target: cell.v, Tooltip: 'Clique para ver a foto' };
-        cell.s = { font: { color: { rgb: '0000FF' }, underline: true } };
-        cell.v = 'Ver foto →';
-      }
-    }
   }
 
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário');
@@ -913,6 +924,66 @@ function exportExcel() {
 
   XLSX.writeFile(wb, `inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
   showToast('📥 Planilha baixada!');
+}
+
+function showZipModal() {
+  document.getElementById('zip-modal').style.display = 'flex';
+  document.getElementById('zip-plaqueta').value = '';
+  document.getElementById('zip-loading').style.display = 'none';
+}
+
+async function downloadZip() {
+  const plaquetaFiltro = document.getElementById('zip-plaqueta').value.trim();
+  document.getElementById('zip-loading').style.display = 'block';
+
+  try {
+    const zip = new JSZip();
+    let lista = items.filter(i => i.vistoriado);
+    if (plaquetaFiltro) lista = lista.filter(i => String(i.plaqueta).trim() === plaquetaFiltro);
+
+    if (lista.length === 0) {
+      showToast('⚠️ Nenhum item vistoriado encontrado.');
+      document.getElementById('zip-loading').style.display = 'none';
+      return;
+    }
+
+    let total = 0;
+    for (const item of lista) {
+      const plaqueta = item.plaqueta || 'sem_plaqueta';
+      const pasta = zip.folder(`plaqueta_${plaqueta}`);
+      const slots = { main: item.imagem, frente: item.fotos?.frente, traseira: item.fotos?.traseira, direita: item.fotos?.direita, esquerda: item.fotos?.esquerda, serie: item.fotos?.serie };
+
+      for (const [slot, url] of Object.entries(slots)) {
+        if (!url || url.startsWith('data:') || !url.startsWith('http')) continue;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          const ext = blob.type.split('/')[1] || 'jpg';
+          pasta.file(`${slot}.${ext}`, blob);
+          total++;
+        } catch(e) { continue; }
+      }
+    }
+
+    if (total === 0) {
+      showToast('⚠️ Nenhuma foto encontrada para baixar.');
+      document.getElementById('zip-loading').style.display = 'none';
+      return;
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = plaquetaFiltro ? `fotos_${plaquetaFiltro}.zip` : `fotos_inventario_${new Date().toISOString().slice(0,10)}.zip`;
+    a.click();
+    showToast(`✅ ZIP com ${total} fotos baixado!`);
+  } catch(e) {
+    showToast('⚠️ Erro ao gerar ZIP.');
+  }
+
+  document.getElementById('zip-loading').style.display = 'none';
+  document.getElementById('zip-modal').style.display = 'none';
 }
 
 function showToast(msg) {
