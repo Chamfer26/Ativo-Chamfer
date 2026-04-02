@@ -274,6 +274,31 @@
       <option>Inativo</option>
     </select>
 
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div>
+        <label>Nº Maq F</label>
+        <input type="text" id="f-num-maq" placeholder="Ex: MAQ-01" />
+      </div>
+      <div>
+        <label>Nº Molde F</label>
+        <input type="text" id="f-num-molde" placeholder="Ex: MOL-01" />
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div>
+        <label>Número Robô F</label>
+        <input type="text" id="f-num-robo" placeholder="Ex: ROB-01" />
+      </div>
+      <div>
+        <label>Posição Máquina</label>
+        <select id="f-posicao-maq">
+          <option value="">Selecione...</option>
+          ${Array.from({length:40},(_,i)=>`<option>${i+1}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
     <label>Localização / Setor</label>
     <select id="f-local">
       <option value="">Selecione o departamento...</option>
@@ -286,6 +311,9 @@
         <option>Fábrica - Qualidade</option>
         <option>Fábrica - Salas Administrativo</option>
         <option>Fábrica - Ferramentaria</option>
+        <option>Fábrica - Robótica</option>
+        <option>Fábrica - Manutenção</option>
+        <option>Fábrica - Utilidades</option>
       </optgroup>
       <optgroup label="Administrativo">
         <option>Administrativo - Financeiro</option>
@@ -617,6 +645,10 @@ function addItem() {
     descricao: document.getElementById('f-descricao').value.trim(),
     estado: document.getElementById('f-estado').value,
     local: document.getElementById('f-local').value.trim(),
+    num_maq: document.getElementById('f-num-maq').value.trim(),
+    num_molde: document.getElementById('f-num-molde').value.trim(),
+    num_robo: document.getElementById('f-num-robo').value.trim(),
+    posicao_maq: document.getElementById('f-posicao-maq').value,
     vistoriado: true,
     data_vistoria: new Date().toLocaleDateString('pt-BR'),
     imagem: photos.frente ? photos.frente.dataUrl : (currentImageBase64 ? `data:${currentImageMime};base64,${currentImageBase64}` : null),
@@ -640,7 +672,7 @@ function addItem() {
   }
 
   // reset
-  ['f-plaqueta','f-serie','f-nome','f-descricao','f-subtipo','f-marca','f-modelo','f-ano-fab'].forEach(id => document.getElementById(id).value = '');
+  ['f-plaqueta','f-serie','f-nome','f-descricao','f-subtipo','f-marca','f-modelo','f-ano-fab','f-num-maq','f-num-molde','f-num-robo'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ai-badge').classList.remove('show');
   document.getElementById('f-estado').value = '';
   document.getElementById('f-tipo').value = '';
@@ -730,6 +762,10 @@ async function save(item, successMsg) {
       descricao: item.descricao || '',
       estado: item.estado || '',
       local: item.local || '',
+      num_maq: item.num_maq || '',
+      num_molde: item.num_molde || '',
+      num_robo: item.num_robo || '',
+      posicao_maq: item.posicao_maq || '',
       vistoriado: item.vistoriado || false,
       data_vistoria: item.data_vistoria || null,
       imagem: item.imagem || null,
@@ -884,24 +920,16 @@ function exportExcel() {
   const headers = [
     'Nº Plaqueta','Nº de Série','Tipo de Ativo','Subtipo','Marca','Modelo',
     'Ano Fabricação','Equipamento','Descrição','Estado de Conservação',
-    'Localização / Setor','Vistoriado','Data Vistoria',
+    'Localização / Setor','Nº Maq F','Nº Molde F','Nº Robô F','Posição Máquina',
+    'Vistoriado','Data Vistoria',
     'Foto Principal','Foto Frente','Foto Traseira','Foto Lado Direito','Foto Lado Esquerdo','Foto Plaqueta/S.N'
   ];
 
   const rows = items.map(i => [
-    i.plaqueta,
-    i.serie || '',
-    i.tipo || '',
-    i.subtipo || '',
-    i.marca || '',
-    i.modelo || '',
-    i.ano_fabricacao || '',
-    i.nome || '',
-    i.descricao || '',
-    i.estado || '',
-    i.local || '',
-    i.vistoriado ? 'Sim' : 'Não',
-    i.data_vistoria || '',
+    i.plaqueta, i.serie || '', i.tipo || '', i.subtipo || '', i.marca || '', i.modelo || '',
+    i.ano_fabricacao || '', i.nome || '', i.descricao || '', i.estado || '', i.local || '',
+    i.num_maq || '', i.num_molde || '', i.num_robo || '', i.posicao_maq || '',
+    i.vistoriado ? 'Sim' : 'Não', i.data_vistoria || '',
     (i.imagem && i.imagem.startsWith('http')) ? i.imagem : '',
     (i.fotos?.frente && i.fotos.frente.startsWith('http')) ? i.fotos.frente : '',
     (i.fotos?.traseira && i.fotos.traseira.startsWith('http')) ? i.fotos.traseira : '',
@@ -911,7 +939,7 @@ function exportExcel() {
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,12,14,60,60,60,60,60,60].map(w => ({wch: w}));
+  ws['!cols'] = [16,20,22,16,16,18,14,24,50,20,22,14,14,14,16,12,14,60,60,60,60,60,60].map(w => ({wch: w}));
 
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
@@ -1054,3 +1082,4 @@ loadFromServer();
 </script>
 </body>
 </html>
+
