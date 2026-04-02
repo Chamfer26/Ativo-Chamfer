@@ -292,10 +292,7 @@
       </div>
       <div>
         <label>Posição Máquina</label>
-        <select id="f-posicao-maq">
-          <option value="">Selecione...</option>
-          ${Array.from({length:40},(_,i)=>`<option>${i+1}</option>`).join('')}
-        </select>
+        <input type="text" id="f-posicao-maq" placeholder="Ex: 1" />
       </div>
     </div>
 
@@ -672,7 +669,7 @@ function addItem() {
   }
 
   // reset
-  ['f-plaqueta','f-serie','f-nome','f-descricao','f-subtipo','f-marca','f-modelo','f-ano-fab','f-num-maq','f-num-molde','f-num-robo'].forEach(id => document.getElementById(id).value = '');
+  ['f-plaqueta','f-serie','f-nome','f-descricao','f-subtipo','f-marca','f-modelo','f-ano-fab','f-num-maq','f-num-molde','f-num-robo','f-posicao-maq'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ai-badge').classList.remove('show');
   document.getElementById('f-estado').value = '';
   document.getElementById('f-tipo').value = '';
@@ -1082,4 +1079,3 @@ loadFromServer();
 </script>
 </body>
 </html>
-
