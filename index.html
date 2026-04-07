@@ -311,6 +311,7 @@
         <option>Fábrica - Robótica</option>
         <option>Fábrica - Manutenção</option>
         <option>Fábrica - Utilidades</option>
+        <option>Fábrica - Produção</option>
       </optgroup>
       <optgroup label="Administrativo">
         <option>Administrativo - Financeiro</option>
@@ -510,7 +511,7 @@ function handleImage(e) {
       renderSlot(currentSlot, dataUrl);
       updateSlotStates();
       document.getElementById('file-input').value = '';
-      if (currentSlot === 'frente') { currentImageBase64 = b64; identifyWithAI(); }
+      if (currentSlot === 'frente' && !document.getElementById('f-nome').value.trim()) { currentImageBase64 = b64; identifyWithAI(); }
       if (currentSlot === 'serie') extractAnoFabricacao(b64, currentImageMime);
     } else {
       currentImageBase64 = b64;
@@ -518,7 +519,7 @@ function handleImage(e) {
       document.getElementById('img-preview-wrap').style.display = 'block';
       document.getElementById('upload-placeholder').style.display = 'none';
       document.getElementById('file-input').value = '';
-      identifyWithAI();
+      if (!document.getElementById('f-nome').value.trim()) identifyWithAI();
     }
   };
   reader.readAsDataURL(file);
