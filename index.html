@@ -803,13 +803,28 @@ async function loadFromServer() {
     const cfg = await rc.json();
     if (Array.isArray(cfg) && cfg.length > 0) CLAUDE_API_KEY = cfg[0].valor;
 
-    // Busca os itens do inventário
-    const r = await fetch(SUPABASE_URL + '/rest/v1/inventario?select=*&order=id.asc&limit=2000', {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    });
-    const serverItems = await r.json();
-    if (Array.isArray(serverItems) && serverItems.length > 0) {
-      items = serverItems;
+    // Busca todos os itens com paginação
+    let todos = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/inventario?select=*&order=id.asc&limit=${pageSize}&offset=${from}`, {
+        headers: { 
+          'apikey': SUPABASE_KEY, 
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Range-Unit': 'items',
+          'Range': `${from}-${from + pageSize - 1}`
+        }
+      });
+      const page = await r.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      todos = todos.concat(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    if (todos.length > 0) {
+      items = todos;
       showToast('✅ ' + items.length.toLocaleString('pt-BR') + ' itens carregados');
     } else {
       showToast('✅ Conectado ao banco de dados');
@@ -989,7 +1004,10 @@ function viewFotos(id) {
       <div style="margin-bottom:16px;">
         <p style="color:#aaa;font-size:12px;margin-bottom:6px;">${s.label}</p>
         <img src="${s.url}" style="width:100%;border-radius:8px;object-fit:contain;background:#111;" />
-        <a href="${s.url}" target="_blank" style="display:block;text-align:center;color:#7ab3f0;font-size:12px;margin-top:4px;">Abrir em tamanho original ↗</a>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <a href="${s.url}" target="_blank" style="flex:1;text-align:center;color:#7ab3f0;font-size:12px;padding:6px;background:#1a1a2e;border-radius:6px;">↗ Abrir</a>
+          <a href="${s.url}" download style="flex:1;text-align:center;color:#7ab3f0;font-size:12px;padding:6px;background:#1a1a2e;border-radius:6px;">⬇ Baixar</a>
+        </div>
       </div>
     `).join('');
   }
